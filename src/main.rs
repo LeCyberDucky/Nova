@@ -1,82 +1,91 @@
-use std::io::Write;
+use std::convert::From;
 
 use anyhow::Result;
-use ndarray::{self, Array2, array};
+use ndarray::{self, Array2};
 
+#[derive(Clone, Copy)]
 struct Pixel {
-    data: ndarray::Array1<u8>,
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8,
 }
 
 impl Pixel {
-    fn new(r: u8, g: u8, b: u8) -> Self {
-        Self {
-            data: array![r, g, b]
-        }
+    fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self { r, g, b, a }
     }
 
     fn r(&self) -> u8 {
-        self.data[0]
+        self.r
     }
 
     fn g(&self) -> u8 {
-        self.data[1]
+        self.g
     }
 
     fn b(&self) -> u8 {
-        self.data[2]
+        self.b
     }
 
-    fn set(&mut self, r: u8, g: u8, b: u8) {
-        self.data[0] = r;
-        self.data[1] = g;
-        self.data[2] = b;
+    fn a(&self) -> u8 {
+        self.a
+    }
+
+    fn set(&mut self, r: u8, g: u8, b: u8, a: u8) {
+        self.r = r;
+        self.g = g;
+        self.b = b;
+        self.a = a;
+    }
+}
+
+impl From<Pixel> for image::Rgba<u8> {
+    fn from(pixel: Pixel) -> Self {
+        image::Rgba([pixel.r(), pixel.g(), pixel.b(), pixel.a()])
     }
 }
 
 impl Default for Pixel {
     fn default() -> Self {
-        Self::new(0, 0, 0)
+        Self::new(0, 0, 0, 255)
     }
 }
 
 struct Image {
     data: Array2<Pixel>,
     width: usize,
-    height: usize
+    height: usize,
 }
 
 impl Image {
-    fn from_data(data: Array2<Pixel>, width: usize, height: usize) -> Self { Self { data, width, height } }
+    fn from_data(data: Array2<Pixel>, width: usize, height: usize) -> Self {
+        Self {
+            data,
+            width,
+            height,
+        }
+    }
 
     fn new(width: usize, height: usize) -> Self {
         let data = Array2::<Pixel>::default((height, width));
         Self::from_data(data, width, height)
     }
 
-    fn save<P>(&self, file_path: P) -> Result<()> 
-    where P: AsRef<std::path::Path>
+    fn save<P>(&self, file_path: P) -> Result<()>
+    where
+        P: AsRef<std::path::Path>,
     {
-        let mut file = std::fs::File::create(file_path)?;
-        let header = format!("P3\n\
-        {} {}\n\
-        {}\n", self.width, self.height, u8::MAX);
-        file.write_all(header.as_bytes())?;
-
-        for y in 0..self.height {
-            for x in 0..self.width {
-                let pixel = &self.data[(y, x)];
-                let content = format!("{} {} {}\n", pixel.r(), pixel.g(), pixel.b());
-                file.write_all(content.as_bytes())?;
-            }
-        }
-
+        image::ImageBuffer::from_fn(self.width as u32, self.height as u32, |x, y| {
+            image::Rgba::from(self.data[(y as usize, x as usize)])
+        })
+        .save(file_path)?;
         Ok(())
     }
 }
 
-
 fn main() -> Result<()> {
-    let mut image = Image::new(256, 256);
+    let mut image = Image::new(1024, 1024);
     for y in 0..image.height {
         for x in 0..image.width {
             let j = image.height - 1 - y;
@@ -90,11 +99,9 @@ fn main() -> Result<()> {
             let g = (255.999 * g) as u8;
             let b = (255.999 * b) as u8;
 
-            image.data[(y, x)].set(r, g, b);
+            image.data[(y, x)].set(r, g, b, 255);
         }
     }
 
-    image.save("Nova.ppm")?;
-
-    Ok(())
+    image.save("Nova.png")
 }
