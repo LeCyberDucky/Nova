@@ -4,11 +4,13 @@ use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use nova::{geometry::Vec3D, image::Image};
 
 fn main() -> Result<()> {
-    let a = Vec3D::new(1.0, 2.0, 3.0);
+    let a = Vec3D::new(1, 2, 3);
     let a = -a;
-    let b = Vec3D::new(4.0, 5.0, 6.0);
+    let b = Vec3D::new(4, 5, 6);
     println!("{:#?} * {:#?} = {:#?}", a, b, a * b);
     println!("Magnitude(a) = {}", a.magnitude());
+    println!("{:#?}", (a + 1) == ((a + 2) - 1));
+    println!("{:#?}", (a - a) == Vec3D::new(0, 0, 0));
 
     let mut image = Image::new(1024, 1024);
 
