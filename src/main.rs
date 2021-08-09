@@ -1,9 +1,15 @@
 use anyhow::Result;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 
-use nova::image::Image;
+use nova::{geometry::Vec3D, image::Image};
 
 fn main() -> Result<()> {
+    let a = Vec3D::new(1.0, 2.0, 3.0);
+    let a = -a;
+    let b = Vec3D::new(4.0, 5.0, 6.0);
+    println!("{:#?} * {:#?} = {:#?}", a, b, a * b);
+    println!("Magnitude(a) = {}", a.magnitude());
+
     let mut image = Image::new(1024, 1024);
 
     let progress_bar = ProgressBar::new(*image.height() as u64).with_style(
