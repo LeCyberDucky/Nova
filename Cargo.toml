@@ -9,3 +9,8 @@ edition = "2018"
 ndarray = "0.15.3"
 anyhow = "1.0.42"
 image = "0.23.14"
+indicatif = {version = "0.16.2", features = ["improved_unicode"]}
+
+
+[patch.crates-io]
+console = { git = "https://github.com/mitsuhiko/console"}
