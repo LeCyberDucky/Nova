@@ -1,11 +1,29 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
+struct Ray {
+    origin: Point3D,
+    direction: Vec3D,
+}
+
+impl Ray {
+    pub fn new(origin: Point3D, direction: Vec3D) -> Self {
+        Self { origin, direction }
+    }
+
+    pub fn at<T: Into<f64>>(&self, t: T) -> Point3D {
+        self.origin + t.into() * self.direction
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Vec3D {
     pub x: f64,
     pub y: f64,
     pub z: f64,
 }
+
+type Point3D = Vec3D;
 
 impl Vec3D {
     pub fn new<A: Into<f64>, B: Into<f64>, C: Into<f64>>(x: A, y: B, z: C) -> Self {
@@ -50,6 +68,22 @@ impl Add<Vec3D> for Vec3D {
     }
 }
 
+impl Add<Vec3D> for i32 {
+    type Output = Vec3D;
+
+    fn add(self, rhs: Vec3D) -> Self::Output {
+        rhs + self
+    }
+}
+
+impl Add<Vec3D> for f64 {
+    type Output = Vec3D;
+
+    fn add(self, rhs: Vec3D) -> Self::Output {
+        rhs + self
+    }
+}
+
 impl<T: Into<f64>> AddAssign<T> for Vec3D {
     fn add_assign(&mut self, rhs: T) {
         let rhs = rhs.into();
@@ -80,6 +114,24 @@ impl Sub<Vec3D> for Vec3D {
 
     fn sub(self, rhs: Vec3D) -> Self::Output {
         self.add(-rhs)
+    }
+}
+
+// Does subtracting a vector from a scalar actually make sense?
+// Eh, this non-symmetric operator stuff has mushed my brain 🧠
+impl Sub<Vec3D> for i32 {
+    type Output = Vec3D;
+
+    fn sub(self, rhs: Vec3D) -> Self::Output {
+        -(rhs - self)
+    }
+}
+
+impl Sub<Vec3D> for f64 {
+    type Output = Vec3D;
+
+    fn sub(self, rhs: Vec3D) -> Self::Output {
+        -(rhs - self)
     }
 }
 
@@ -121,6 +173,22 @@ impl Mul<Vec3D> for Vec3D {
     }
 }
 
+impl Mul<Vec3D> for i32 {
+    type Output = Vec3D;
+
+    fn mul(self, rhs: Vec3D) -> Self::Output {
+        rhs * self
+    }
+}
+
+impl Mul<Vec3D> for f64 {
+    type Output = Vec3D;
+
+    fn mul(self, rhs: Vec3D) -> Self::Output {
+        rhs * self
+    }
+}
+
 impl<T: Into<f64>> Div<T> for Vec3D {
     type Output = Vec3D;
 
@@ -159,6 +227,8 @@ mod tests {
         let d = Vec3D::new(2, 3, 4);
         assert_eq!(a + b, c);
         assert_eq!(a + 1, d);
+        assert_eq!(1 + a, d);
+        assert_eq!(1.0 + a, d);
     }
 
     #[test]
@@ -169,6 +239,8 @@ mod tests {
         let d = Vec3D::new(0, 1, 2);
         assert_eq!(a - b, c);
         assert_eq!(a - 1, d);
+        assert_eq!(-(1 - a), d);
+        assert_eq!(-(1.0 - a), d);
     }
 
     #[test]
@@ -201,6 +273,7 @@ mod tests {
         let b = Vec3D::new(-16, 5, 2);
         assert_eq!(a * b, 0.0);
         assert_eq!(a * (-2), -a * 2);
+        assert_eq!(-2 * a, -a * 2);
     }
 
     #[test]

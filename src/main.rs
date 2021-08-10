@@ -5,7 +5,6 @@ use nova::{geometry::Vec3D, image::Image};
 
 fn main() -> Result<()> {
     let a = Vec3D::new(1, 2, 3);
-    let a = -a;
     let b = Vec3D::new(4, 5, 6);
     println!("{:#?} * {:#?} = {:#?}", a, b, a * b);
     println!("Magnitude(a) = {}", a.magnitude());
