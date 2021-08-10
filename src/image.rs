@@ -5,31 +5,15 @@ use ndarray::{self, Array2};
 
 #[derive(Clone, Copy)]
 pub struct Pixel {
-    r: u8,
-    g: u8,
-    b: u8,
-    a: u8,
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
 }
 
 impl Pixel {
     pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
-    }
-
-    pub fn r(&self) -> u8 {
-        self.r
-    }
-
-    pub fn g(&self) -> u8 {
-        self.g
-    }
-
-    pub fn b(&self) -> u8 {
-        self.b
-    }
-
-    pub fn a(&self) -> u8 {
-        self.a
     }
 
     pub fn set(&mut self, r: u8, g: u8, b: u8, a: u8) {
@@ -42,7 +26,7 @@ impl Pixel {
 
 impl From<Pixel> for image::Rgba<u8> {
     fn from(pixel: Pixel) -> Self {
-        image::Rgba([pixel.r(), pixel.g(), pixel.b(), pixel.a()])
+        image::Rgba([pixel.r, pixel.g, pixel.b, pixel.a])
     }
 }
 
