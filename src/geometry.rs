@@ -19,6 +19,18 @@ impl Vec3D {
     pub fn magnitude(&self) -> f64 {
         (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).sqrt()
     }
+
+    pub fn cross_product(&self, rhs: &Vec3D) -> Vec3D {
+        let x = self.y * rhs.z - self.z * rhs.y;
+        let y = self.z * rhs.x - self.x * rhs.z;
+        let z = self.x * rhs.y - self.y * rhs.x;
+
+        Vec3D::new(x, y, z)
+    }
+
+    pub fn normalize(&mut self) {
+        *self /= self.magnitude()
+    }
 }
 
 impl<T: Into<f64>> Add<T> for Vec3D {
@@ -226,5 +238,35 @@ mod tests {
         assert_eq!(Vec3D::new(1, 2, 2).magnitude(), 3.0);
         assert_eq!(Vec3D::new(-2, -3, -6).magnitude(), 7.0);
         assert_eq!(Vec3D::new(1, -4, 8).magnitude(), 9.0);
+    }
+
+    #[test]
+    fn test_cross_product() {
+        let a = Vec3D::new(1, 2, 3);
+        let b = Vec3D::new(4, 5, 6);
+        let c = Vec3D::new(-12, 3, 2);
+
+        assert_eq!(a.cross_product(&b), Vec3D::new(-3, 6, -3));
+        assert_eq!(b.cross_product(&a), Vec3D::new(3, -6, 3));
+        assert_eq!(a * c, 0.0); // a and c need to be perpendicular for the next tests
+        assert_eq!(a.cross_product(&c) * a, 0.0);
+        assert_eq!(a.cross_product(&c) * c, 0.0);
+        assert_eq!(c.cross_product(&a) * a, 0.0);
+        assert_eq!(c.cross_product(&a) * c, 0.0);
+    }
+
+    #[test]
+    fn test_normalize() {
+        let mut a = Vec3D::new(1, -1, 1);
+        a.normalize();
+        assert_eq!(a.magnitude(), 1.0);
+        assert_eq!(
+            a,
+            Vec3D::new(
+                1.0 / 3.0_f64.sqrt(),
+                -1.0 / 3.0_f64.sqrt(),
+                1.0 / 3.0_f64.sqrt()
+            )
+        );
     }
 }
