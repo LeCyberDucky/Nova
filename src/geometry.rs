@@ -1,5 +1,7 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
+use crate::image;
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 struct Ray {
     origin: Point3D,
@@ -13,6 +15,10 @@ impl Ray {
 
     pub fn at<T: Into<f64>>(&self, t: T) -> Point3D {
         self.origin + t.into() * self.direction
+    }
+
+    pub fn color() -> image::Color {
+        todo!()
     }
 }
 
