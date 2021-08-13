@@ -1,9 +1,9 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use crate::image;
+use crate::image::{self, Color};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
-struct Ray {
+pub struct Ray {
     origin: Point3D,
     direction: Vec3D,
 }
@@ -17,8 +17,12 @@ impl Ray {
         self.origin + t.into() * self.direction
     }
 
-    pub fn color() -> image::Color {
-        todo!()
+    pub fn color(&self) -> image::Color {
+        let mut direction = self.direction;
+        direction.normalize();
+
+        let t = 0.5 * (direction.y + 1.0);
+        (1.0 - t) * Color::WHITE + t * Color::SKY_BLUE
     }
 }
 
@@ -29,7 +33,7 @@ pub struct Vec3D {
     pub z: f64,
 }
 
-type Point3D = Vec3D;
+pub type Point3D = Vec3D;
 
 impl Vec3D {
     pub fn new<A: Into<f64>, B: Into<f64>, C: Into<f64>>(x: A, y: B, z: C) -> Self {

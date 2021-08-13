@@ -2,6 +2,7 @@
 name = "nova"
 version = "0.1.0"
 edition = "2018"
+default-run = "nova"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -9,7 +10,7 @@ edition = "2018"
 ndarray = "0.15.3"
 anyhow = "1.0.42"
 image = "0.23.14"
-indicatif = { version = "0.16.2", features = ["improved_unicode"] }
+indicatif = { git = "https://github.com/mitsuhiko/indicatif", features = ["improved_unicode"] }
 
 
 [patch.crates-io]
