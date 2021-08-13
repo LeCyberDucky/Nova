@@ -1,7 +1,6 @@
 use anyhow::Result;
-// use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
-
 use indicatif::{ProgressIterator, ProgressStyle};
+
 use nova::{
     geometry::{Point3D, Ray, Vec3D},
     image::Image,

@@ -29,7 +29,7 @@ impl Color {
     pub const RED: Self = Self {
         r: 1.0,
         g: 0.0,
-        b: 0.0
+        b: 0.0,
     };
 
     pub const SKY_BLUE: Self = Self {
@@ -227,16 +227,6 @@ impl Pixel {
         self.g = g;
         self.b = b;
         self.a = a;
-    }
-
-    /// Get a reference to the pixel's a.
-    pub fn a(&self) -> &u8 {
-        &self.a
-    }
-
-    /// Get a mutable reference to the pixel's a.
-    pub fn a_mut(&mut self) -> &mut u8 {
-        &mut self.a
     }
 }
 

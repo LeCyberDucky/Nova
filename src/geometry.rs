@@ -2,26 +2,65 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 
 use crate::image::{self, Color};
 
+trait Obstacle {
+    fn hit<A: Into<f64>, B: Into<f64>>(&self, ray: &Ray, t_min: A, t_max: B) -> Option<Hit>;
+}
+
+struct Hit {
+    p: Point3D,
+    normal: Vec3D,
+    t: f64,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Sphere {
     center: Point3D,
-    radius: f64
+    radius: f64,
 }
 
 impl Sphere {
-    pub fn new(center: Point3D, radius: f64) -> Self { Self { center, radius } }
+    pub fn new<T: Into<f64>>(center: Point3D, radius: T) -> Self {
+        Self {
+            center,
+            radius: radius.into(),
+        }
+    }
 
-    pub fn hit(&self, ray: &Ray) -> bool {
-        let oc = ray.origin - self.center;
-        let a = ray.direction * ray.direction;
-        let b = 2.0 * oc * ray.direction;
-        let c = oc * oc - self.radius * self.radius;
-        let discriminant = b*b -  4.0*a*c;
-        discriminant > 0.0
+    pub fn surface_normal(&self, surface_point: Point3D) -> Vec3D {
+        let mut normal = surface_point - self.center;
+        normal.normalize();
+        normal
     }
 }
 
+impl Obstacle for Sphere {
+    fn hit<A: Into<f64>, B: Into<f64>>(&self, ray: &Ray, t_min: A, t_max: B) -> Option<Hit> {
+        let (t_min, t_max) = (t_min.into(), t_max.into());
+        let oc = self.center - ray.origin;
+        let a = ray.direction.magnitude_squared();
+        let half_b = oc * ray.direction;
+        let c = oc.magnitude_squared() - self.radius.powi(2);
 
+        let discriminant = half_b.powi(2) - a * c;
+        if discriminant < 0.0 {
+            return None;
+        };
+        let discriminant_sqrt = discriminant.sqrt();
+
+        // Find the nearest root that lies in the acceptable range
+        let mut root = (half_b - discriminant_sqrt) / a;
+        if root < t_min || t_max < root {
+            root = (discriminant_sqrt + half_b) / a;
+            if root < t_min || t_max < root {
+                return None;
+            }
+        }
+
+        let p = ray.at(root);
+        let normal = self.surface_normal(p);
+        Some(Hit { p, normal, t: root })
+    }
+}
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Ray {
@@ -39,8 +78,11 @@ impl Ray {
     }
 
     pub fn color(&self) -> image::Color {
-        if Sphere::new(Point3D::new(0, 0, -1), 0.5).hit(self) {
-            return Color::RED;
+        let sphere = Sphere::new(Point3D::new(0, 0, -1), 0.5);
+        if let Some(hit) = sphere.hit(self, 0, 1) {
+            // let normal = sphere.surface_normal(self.at(hit));
+            let color_map = (hit.normal + 1) / 2; // [-1; 1] to [0; 1]
+            return Color::new(color_map.x, color_map.y, color_map.z);
         }
 
         let mut direction = self.direction;
@@ -69,8 +111,12 @@ impl Vec3D {
         }
     }
 
+    pub fn magnitude_squared(&self) -> f64 {
+        self.x.powi(2) + self.y.powi(2) + self.z.powi(2)
+    }
+
     pub fn magnitude(&self) -> f64 {
-        (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).sqrt()
+        self.magnitude_squared().sqrt()
     }
 
     pub fn cross_product(&self, rhs: &Vec3D) -> Vec3D {
