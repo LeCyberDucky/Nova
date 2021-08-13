@@ -26,6 +26,12 @@ impl Color {
         )
     }
 
+    pub const RED: Self = Self {
+        r: 1.0,
+        g: 0.0,
+        b: 0.0
+    };
+
     pub const SKY_BLUE: Self = Self {
         r: 135.0 / 255.0,
         g: 206.0 / 255.0,

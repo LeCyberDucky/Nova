@@ -3,6 +3,27 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 use crate::image::{self, Color};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub struct Sphere {
+    center: Point3D,
+    radius: f64
+}
+
+impl Sphere {
+    pub fn new(center: Point3D, radius: f64) -> Self { Self { center, radius } }
+
+    pub fn hit(&self, ray: &Ray) -> bool {
+        let oc = ray.origin - self.center;
+        let a = ray.direction * ray.direction;
+        let b = 2.0 * oc * ray.direction;
+        let c = oc * oc - self.radius * self.radius;
+        let discriminant = b*b -  4.0*a*c;
+        discriminant > 0.0
+    }
+}
+
+
+
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Ray {
     origin: Point3D,
     direction: Vec3D,
@@ -18,6 +39,10 @@ impl Ray {
     }
 
     pub fn color(&self) -> image::Color {
+        if Sphere::new(Point3D::new(0, 0, -1), 0.5).hit(self) {
+            return Color::RED;
+        }
+
         let mut direction = self.direction;
         direction.normalize();
 
