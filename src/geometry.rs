@@ -3,13 +3,55 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 use crate::image::{self, Color};
 
 trait Obstacle {
-    fn hit<A: Into<f64>, B: Into<f64>>(&self, ray: &Ray, t_min: A, t_max: B) -> Option<Hit>;
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<Hit>;
+}
+
+struct ObstacleCollection {
+    obstacles: Vec<Box<dyn Obstacle>>,
+}
+
+impl ObstacleCollection {
+    fn new(obstacles: Vec<Box<dyn Obstacle>>) -> Self { Self { obstacles } }
+    fn clear(&mut self) {
+        self.obstacles.clear();
+    }
+
+    fn add(&mut self, obstacle: Box<dyn Obstacle>) {
+        self.obstacles.push(obstacle);
+    }
+}
+
+impl Obstacle for ObstacleCollection {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<Hit> {
+        let mut closest_hit = None;
+
+        for obstacle in self.obstacles {
+            if let Some(hit) = obstacle.hit(ray, t_min, t_max) {
+                t_max = hit.t;
+                closest_hit = Some(hit);
+            }
+        }
+        closest_hit
+    }
 }
 
 struct Hit {
     p: Point3D,
     normal: Vec3D,
     t: f64,
+    front_face: bool,
+}
+
+impl Hit {
+    fn get_face_normal(ray: &Ray, outward_normal: Vec3D) -> (bool, Vec3D) {
+        let front_face = (ray.direction * outward_normal) < 0.0;
+        let normal = if front_face {
+            outward_normal
+        } else {
+            -outward_normal
+        };
+        (front_face, normal)
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -26,7 +68,7 @@ impl Sphere {
         }
     }
 
-    pub fn surface_normal(&self, surface_point: Point3D) -> Vec3D {
+    pub fn outward_normal(&self, surface_point: Point3D) -> Vec3D {
         let mut normal = surface_point - self.center;
         normal.normalize();
         normal
@@ -34,8 +76,7 @@ impl Sphere {
 }
 
 impl Obstacle for Sphere {
-    fn hit<A: Into<f64>, B: Into<f64>>(&self, ray: &Ray, t_min: A, t_max: B) -> Option<Hit> {
-        let (t_min, t_max) = (t_min.into(), t_max.into());
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<Hit> {
         let oc = self.center - ray.origin;
         let a = ray.direction.magnitude_squared();
         let half_b = oc * ray.direction;
@@ -57,8 +98,14 @@ impl Obstacle for Sphere {
         }
 
         let p = ray.at(root);
-        let normal = self.surface_normal(p);
-        Some(Hit { p, normal, t: root })
+        let outward_normal = self.outward_normal(p);
+        let (front_face, normal) = Hit::get_face_normal(ray, outward_normal);
+        Some(Hit {
+            p,
+            normal,
+            t: root,
+            front_face,
+        })
     }
 }
 
@@ -79,7 +126,7 @@ impl Ray {
 
     pub fn color(&self) -> image::Color {
         let sphere = Sphere::new(Point3D::new(0, 0, -1), 0.5);
-        if let Some(hit) = sphere.hit(self, 0, 1) {
+        if let Some(hit) = sphere.hit(self, 0.0, 1.0) {
             // let normal = sphere.surface_normal(self.at(hit));
             let color_map = (hit.normal + 1) / 2; // [-1; 1] to [0; 1]
             return Color::new(color_map.x, color_map.y, color_map.z);
@@ -246,11 +293,19 @@ impl<T: Into<f64>> MulAssign<T> for Vec3D {
     }
 }
 
+impl Mul<&Vec3D> for Vec3D {
+    type Output = f64;
+
+    fn mul(self, rhs: &Vec3D) -> Self::Output {
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+    }
+}
+
 impl Mul<Vec3D> for Vec3D {
     type Output = f64;
 
     fn mul(self, rhs: Vec3D) -> Self::Output {
-        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+        self * &rhs
     }
 }
 
@@ -288,11 +343,19 @@ impl<T: Into<f64>> DivAssign<T> for Vec3D {
     }
 }
 
+impl Neg for &Vec3D {
+    type Output = Vec3D;
+
+    fn neg(self) -> Self::Output {
+        Self::Output::new(-self.x, -self.y, -self.z)
+    }
+}
+
 impl Neg for Vec3D {
     type Output = Vec3D;
 
     fn neg(self) -> Self::Output {
-        Self::new(-self.x, -self.y, -self.z)
+        -&self
     }
 }
 
