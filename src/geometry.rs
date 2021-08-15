@@ -11,7 +11,9 @@ pub struct ObstacleCollection {
 }
 
 impl ObstacleCollection {
-    pub fn new(obstacles: Vec<Box<dyn Obstacle>>) -> Self { Self { obstacles } }
+    pub fn new(obstacles: Vec<Box<dyn Obstacle>>) -> Self {
+        Self { obstacles }
+    }
     fn clear(&mut self) {
         self.obstacles.clear();
     }
