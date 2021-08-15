@@ -2,16 +2,16 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 
 use crate::image::{self, Color};
 
-trait Obstacle {
+pub trait Obstacle {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<Hit>;
 }
 
-struct ObstacleCollection {
+pub struct ObstacleCollection {
     obstacles: Vec<Box<dyn Obstacle>>,
 }
 
 impl ObstacleCollection {
-    fn new(obstacles: Vec<Box<dyn Obstacle>>) -> Self { Self { obstacles } }
+    pub fn new(obstacles: Vec<Box<dyn Obstacle>>) -> Self { Self { obstacles } }
     fn clear(&mut self) {
         self.obstacles.clear();
     }
@@ -22,10 +22,10 @@ impl ObstacleCollection {
 }
 
 impl Obstacle for ObstacleCollection {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<Hit> {
+    fn hit(&self, ray: &Ray, t_min: f64, mut t_max: f64) -> Option<Hit> {
         let mut closest_hit = None;
 
-        for obstacle in self.obstacles {
+        for obstacle in &self.obstacles {
             if let Some(hit) = obstacle.hit(ray, t_min, t_max) {
                 t_max = hit.t;
                 closest_hit = Some(hit);
@@ -35,7 +35,7 @@ impl Obstacle for ObstacleCollection {
     }
 }
 
-struct Hit {
+pub struct Hit {
     p: Point3D,
     normal: Vec3D,
     t: f64,
@@ -124,10 +124,9 @@ impl Ray {
         self.origin + t.into() * self.direction
     }
 
-    pub fn color(&self) -> image::Color {
-        let sphere = Sphere::new(Point3D::new(0, 0, -1), 0.5);
-        if let Some(hit) = sphere.hit(self, 0.0, 1.0) {
-            // let normal = sphere.surface_normal(self.at(hit));
+    pub fn color(&self, obstacles: &ObstacleCollection) -> image::Color {
+        // let sphere = Sphere::new(Point3D::new(0, 0, -1), 0.5);
+        if let Some(hit) = obstacles.hit(self, 0.0, 1.0) {
             let color_map = (hit.normal + 1) / 2; // [-1; 1] to [0; 1]
             return Color::new(color_map.x, color_map.y, color_map.z);
         }

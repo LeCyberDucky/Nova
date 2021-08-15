@@ -1,16 +1,19 @@
 use anyhow::Result;
 use indicatif::{ProgressIterator, ProgressStyle};
 
-use nova::{
-    geometry::{Point3D, Ray, Vec3D},
-    image::Image,
-};
+use nova::{geometry::{ObstacleCollection, Point3D, Ray, Sphere, Vec3D}, image::Image};
 
 fn main() -> Result<()> {
     // Image
     let aspect_ratio = (16, 9);
     let image_scale = 80;
     let mut image = Image::new(image_scale * aspect_ratio.0, image_scale * aspect_ratio.1);
+
+    // World
+    let world = ObstacleCollection::new(vec![
+        Box::new(Sphere::new(Vec3D::new(0, 0, -1), 0.5)),
+        Box::new(Sphere::new(Vec3D::new(0, -100.5, -1), 100))
+    ]);
 
     // Camera
     let view_port = (aspect_ratio.0 as i32, aspect_ratio.1 as i32);
@@ -34,7 +37,7 @@ fn main() -> Result<()> {
 
             let direction = lower_left_corner + u * horizontal + v * vertical - origin;
             let ray = Ray::new(origin, direction);
-            let pixel = ray.color().into();
+            let pixel = ray.color(&world).into();
 
             image.pixels()[(y, x)] = pixel;
         }
