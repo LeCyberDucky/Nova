@@ -8,10 +8,21 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(aspect_ratio: (i32, i32), focal_length: i32, origin: Vec3D) -> Self {
-        let view_port = aspect_ratio;
-        let horizontal = Vec3D::new(view_port.0, 0, 0);
-        let vertical = Vec3D::new(0, view_port.1, 0);
+    pub fn new(
+        aspect_ratio: (i32, i32),
+        viewport_height: f64,
+        focal_length: f64,
+        origin: Vec3D,
+    ) -> Self {
+        // let viewport_height = 2.0;
+        let viewport_width = viewport_height * (aspect_ratio.0 as f64 / aspect_ratio.1 as f64);
+
+        let horizontal = Vec3D::new(viewport_width, 0, 0);
+        let vertical = Vec3D::new(0, viewport_height, 0);
+
+        // let view_port = aspect_ratio;
+        // let horizontal = Vec3D::new(view_port.0, 0, 0);
+        // let vertical = Vec3D::new(0, view_port.1, 0);
         let lower_left_corner =
             origin - horizontal / 2 - vertical / 2 - Vec3D::new(0, 0, focal_length);
 
@@ -29,11 +40,3 @@ impl Camera {
         Ray::new(self.origin, direction)
     }
 }
-
-// let view_port = (aspect_ratio.0 as i32, aspect_ratio.1 as i32);
-// let focal_length = 1;
-
-// let origin = Point3D::new(0, 0, 0);
-// let horizontal = Vec3D::new(view_port.0, 0, 0);
-// let vertical = Vec3D::new(0, view_port.1, 0);
-// let lower_left_corner = origin - horizontal / 2 - vertical / 2 - Vec3D::new(0, 0, focal_length);

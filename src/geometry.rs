@@ -1,5 +1,7 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
+use rand::{prelude::ThreadRng, Rng};
+
 use crate::image::{self, Color};
 
 pub trait Obstacle {
@@ -71,18 +73,16 @@ impl Sphere {
     }
 
     pub fn outward_normal(&self, surface_point: Point3D) -> Vec3D {
-        let mut normal = surface_point - self.center;
-        normal.normalize();
-        normal
+        (surface_point - self.center) / self.radius
     }
 }
 
 impl Obstacle for Sphere {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<Hit> {
-        let oc = self.center - ray.origin;
+        let co = ray.origin - self.center;
         let a = ray.direction.magnitude_squared();
-        let half_b = oc * ray.direction;
-        let c = oc.magnitude_squared() - self.radius.powi(2);
+        let half_b = co * ray.direction;
+        let c = co.magnitude_squared() - self.radius.powi(2);
 
         let discriminant = half_b.powi(2) - a * c;
         if discriminant < 0.0 {
@@ -91,9 +91,9 @@ impl Obstacle for Sphere {
         let discriminant_sqrt = discriminant.sqrt();
 
         // Find the nearest root that lies in the acceptable range
-        let mut root = (half_b - discriminant_sqrt) / a;
+        let mut root = (-half_b - discriminant_sqrt) / a;
         if root < t_min || t_max < root {
-            root = (discriminant_sqrt + half_b) / a;
+            root = (discriminant_sqrt - half_b) / a;
             if root < t_min || t_max < root {
                 return None;
             }
@@ -126,16 +126,24 @@ impl Ray {
         self.origin + t.into() * self.direction
     }
 
-    pub fn color(&self, obstacles: &ObstacleCollection) -> image::Color {
-        // let sphere = Sphere::new(Point3D::new(0, 0, -1), 0.5);
-        if let Some(hit) = obstacles.hit(self, 0.0, 1.0) {
-            let color_map = (hit.normal + 1) / 2; // [-1; 1] to [0; 1]
-            return Color::new(color_map.x, color_map.y, color_map.z);
+    pub fn color(
+        &self,
+        obstacles: &ObstacleCollection,
+        rng: &mut ThreadRng,
+        depth: usize,
+    ) -> image::Color {
+        if depth == 0 {
+            return Color::BLACK;
         }
 
-        let mut direction = self.direction;
-        direction.normalize();
+        // If the ray hits an obstacle, let the obstacle absorb some light (reduce color), and let the ray bounce back in a random direction
+        if let Some(hit) = obstacles.hit(self, f64::EPSILON, f64::INFINITY) {
+            let target_direction = hit.normal + Vec3D::random_in_unit_sphere(rng);
+            let ray = Ray::new(hit.p, target_direction);
+            return 0.5 * ray.color(obstacles, rng, depth - 1);
+        }
 
+        let direction = self.direction.normalized();
         let t = 0.5 * (direction.y + 1.0);
         (1.0 - t) * Color::WHITE + t * Color::SKY_BLUE
     }
@@ -177,6 +185,37 @@ impl Vec3D {
 
     pub fn normalize(&mut self) {
         *self /= self.magnitude()
+    }
+
+    pub fn normalized(&self) -> Self {
+        *self / self.magnitude()
+    }
+
+    /// Creates a Vec3D with random components in the half-open range [0; 1[
+    pub fn random(rng: &mut ThreadRng) -> Vec3D {
+        Self::new(rng.gen::<f64>(), rng.gen::<f64>(), rng.gen::<f64>())
+    }
+
+    /// Creates a Vec3D with random components in the half-open range [min; max[
+    pub fn random_in_range<A: Into<f64>, B: Into<f64>>(
+        rng: &mut ThreadRng,
+        min: A,
+        max: B,
+    ) -> Vec3D {
+        let (min, max) = (min.into(), max.into());
+        min + (max - min) * Self::random(rng)
+    }
+
+    pub fn random_in_unit_sphere(rng: &mut ThreadRng) -> Vec3D {
+        let mut vector = Self::random_in_range(rng, -1.0, 1.0); // Random vector in unit cube
+        let magnitude_squared = vector.magnitude_squared();
+        if magnitude_squared >= 1.0 {
+            // Vector needs scaling to fit inside unit sphere
+            let max_scale = 1.0 / magnitude_squared.sqrt();
+            let scale = rng.gen_range(0.0..max_scale) * 2.0 - max_scale; // Obtain scaling factor in range ]-max_scale, max_scale[. Directly using max_scale would lead to a weird distribution with a too many vectors directly at the sphere border
+            vector *= scale;
+        }
+        vector
     }
 }
 

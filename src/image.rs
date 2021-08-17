@@ -244,7 +244,9 @@ impl Default for Pixel {
 
 impl From<Color> for Pixel {
     fn from(color: Color) -> Self {
-        let color = color.clamped(0.0, 1.0);
+        // Gamma correction by taking square root
+        let mut color = Color::new(color.r.sqrt(), color.g.sqrt(), color.b.sqrt());
+        color = color.clamped(0.0, 1.0);
         let pixel_max = u8::MAX as f64;
         Pixel {
             r: (color.r * pixel_max).round() as u8,
