@@ -1,6 +1,7 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use rand::{prelude::ThreadRng, Rng};
+use rand_distr::{Distribution, UnitSphere};
 
 use crate::image::{self, Color};
 
@@ -138,7 +139,7 @@ impl Ray {
 
         // If the ray hits an obstacle, let the obstacle absorb some light (reduce color), and let the ray bounce back in a random direction
         if let Some(hit) = obstacles.hit(self, f64::EPSILON, f64::INFINITY) {
-            let target_direction = hit.normal + Vec3D::random_in_unit_sphere(rng);
+            let target_direction = hit.normal + Vec3D::random_on_unit_sphere(rng);
             let ray = Ray::new(hit.p, target_direction);
             return 0.5 * ray.color(obstacles, rng, depth - 1);
         }
@@ -206,16 +207,10 @@ impl Vec3D {
         min + (max - min) * Self::random(rng)
     }
 
-    pub fn random_in_unit_sphere(rng: &mut ThreadRng) -> Vec3D {
-        let mut vector = Self::random_in_range(rng, -1.0, 1.0); // Random vector in unit cube
-        let magnitude_squared = vector.magnitude_squared();
-        if magnitude_squared >= 1.0 {
-            // Vector needs scaling to fit inside unit sphere
-            let max_scale = 1.0 / magnitude_squared.sqrt();
-            let scale = rng.gen_range(0.0..max_scale) * 2.0 - max_scale; // Obtain scaling factor in range ]-max_scale, max_scale[. Directly using max_scale would lead to a weird distribution with a too many vectors directly at the sphere border
-            vector *= scale;
-        }
-        vector
+    pub fn random_on_unit_sphere(rng: &mut ThreadRng) -> Vec3D {
+        // https://stackoverflow.com/questions/14476973/calculating-diffuse-lambertian-reflection
+        let v: [f64; 3] = UnitSphere.sample(rng);
+        Self::new(v[0], v[1], v[2])
     }
 }
 
