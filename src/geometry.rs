@@ -1,7 +1,7 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use rand::{prelude::ThreadRng, Rng};
-use rand_distr::{Distribution, UnitSphere};
+use rand_distr::{self, Distribution};
 
 use crate::image::{self, Color};
 
@@ -140,6 +140,7 @@ impl Ray {
         // If the ray hits an obstacle, let the obstacle absorb some light (reduce color), and let the ray bounce back in a random direction
         if let Some(hit) = obstacles.hit(self, f64::EPSILON, f64::INFINITY) {
             let target_direction = hit.normal + Vec3D::random_on_unit_sphere(rng);
+            // let target_direction = Vec3D::random_in_hemisphere(&hit.normal, rng);
             let ray = Ray::new(hit.p, target_direction);
             return 0.5 * ray.color(obstacles, rng, depth - 1);
         }
@@ -207,10 +208,24 @@ impl Vec3D {
         min + (max - min) * Self::random(rng)
     }
 
-    pub fn random_on_unit_sphere(rng: &mut ThreadRng) -> Vec3D {
+    pub fn random_on_unit_sphere(rng: &mut ThreadRng) -> Self {
         // https://stackoverflow.com/questions/14476973/calculating-diffuse-lambertian-reflection
-        let v: [f64; 3] = UnitSphere.sample(rng);
+        let v: [f64; 3] = rand_distr::UnitSphere.sample(rng);
         Self::new(v[0], v[1], v[2])
+    }
+
+    pub fn random_in_unit_sphere(rng: &mut ThreadRng) -> Self {
+        let v: [f64; 3] = rand_distr::UnitBall.sample(rng);
+        Self::new(v[0], v[1], v[2])
+    }
+
+    pub fn random_in_hemisphere(normal: &Vec3D, rng: &mut ThreadRng) -> Self {
+        let in_unit_sphere = Vec3D::random_in_unit_sphere(rng);
+        if in_unit_sphere * normal > 0.0 { // In the same hemisphere as the normal
+            in_unit_sphere
+        } else {
+            -in_unit_sphere
+        }
     }
 }
 
