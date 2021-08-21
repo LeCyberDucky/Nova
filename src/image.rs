@@ -6,7 +6,7 @@ use std::{
 use anyhow::Result;
 use ndarray::{self, Array2};
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Color {
     // Floating point components, as this struct will be used for a lot of math that would probably suffer from rounding errors with integer math. The components should lie in the range [0; 1]
     pub r: f64,
@@ -166,10 +166,10 @@ impl<T: Into<f64>> MulAssign<T> for Color {
 }
 
 impl Mul<Color> for Color {
-    type Output = f64;
+    type Output = Color;
 
     fn mul(self, rhs: Color) -> Self::Output {
-        self.r * rhs.r + self.g * rhs.g + self.b * rhs.b
+        Self::Output::new(self.r * rhs.r, self.g * rhs.g, self.b * rhs.b)
     }
 }
 

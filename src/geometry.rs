@@ -3,114 +3,10 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 use rand::{prelude::ThreadRng, Rng};
 use rand_distr::{self, Distribution};
 
-use crate::image::{self, Color};
-
-pub trait Obstacle {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<Hit>;
-}
-
-pub struct ObstacleCollection {
-    obstacles: Vec<Box<dyn Obstacle>>,
-}
-
-impl ObstacleCollection {
-    pub fn new(obstacles: Vec<Box<dyn Obstacle>>) -> Self {
-        Self { obstacles }
-    }
-    fn clear(&mut self) {
-        self.obstacles.clear();
-    }
-
-    fn add(&mut self, obstacle: Box<dyn Obstacle>) {
-        self.obstacles.push(obstacle);
-    }
-}
-
-impl Obstacle for ObstacleCollection {
-    fn hit(&self, ray: &Ray, t_min: f64, mut t_max: f64) -> Option<Hit> {
-        let mut closest_hit = None;
-
-        for obstacle in &self.obstacles {
-            if let Some(hit) = obstacle.hit(ray, t_min, t_max) {
-                t_max = hit.t;
-                closest_hit = Some(hit);
-            }
-        }
-        closest_hit
-    }
-}
-
-pub struct Hit {
-    p: Point3D,
-    normal: Vec3D,
-    t: f64,
-    front_face: bool,
-}
-
-impl Hit {
-    fn get_face_normal(ray: &Ray, outward_normal: Vec3D) -> (bool, Vec3D) {
-        let front_face = (ray.direction * outward_normal) < 0.0;
-        let normal = if front_face {
-            outward_normal
-        } else {
-            -outward_normal
-        };
-        (front_face, normal)
-    }
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
-pub struct Sphere {
-    center: Point3D,
-    radius: f64,
-}
-
-impl Sphere {
-    pub fn new<T: Into<f64>>(center: Point3D, radius: T) -> Self {
-        Self {
-            center,
-            radius: radius.into(),
-        }
-    }
-
-    pub fn outward_normal(&self, surface_point: Point3D) -> Vec3D {
-        (surface_point - self.center) / self.radius
-    }
-}
-
-impl Obstacle for Sphere {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<Hit> {
-        let co = ray.origin - self.center;
-        let a = ray.direction.magnitude_squared();
-        let half_b = co * ray.direction;
-        let c = co.magnitude_squared() - self.radius.powi(2);
-
-        let discriminant = half_b.powi(2) - a * c;
-        if discriminant < 0.0 {
-            return None;
-        };
-        let discriminant_sqrt = discriminant.sqrt();
-
-        // Find the nearest root that lies in the acceptable range
-        let mut root = (-half_b - discriminant_sqrt) / a;
-        if root < t_min || t_max < root {
-            root = (discriminant_sqrt - half_b) / a;
-            if root < t_min || t_max < root {
-                return None;
-            }
-        }
-
-        let p = ray.at(root);
-        let outward_normal = self.outward_normal(p);
-        let (front_face, normal) = Hit::get_face_normal(ray, outward_normal);
-        Some(Hit {
-            p,
-            normal,
-            t: root,
-            front_face,
-        })
-    }
-}
+use crate::{
+    image::{self, Color},
+    obstacle::{Hit, ObstacleCollection},
+};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Ray {
@@ -138,16 +34,36 @@ impl Ray {
         }
 
         // If the ray hits an obstacle, let the obstacle absorb some light (reduce color), and let the ray bounce back in a random direction
-        if let Some(hit) = obstacles.hit(self, f64::EPSILON, f64::INFINITY) {
-            let target_direction = hit.normal + Vec3D::random_on_unit_sphere(rng);
-            // let target_direction = Vec3D::random_in_hemisphere(&hit.normal, rng);
-            let ray = Ray::new(hit.p, target_direction);
-            return 0.5 * ray.color(obstacles, rng, depth - 1);
+        // if let Some(hit) = obstacles.hit(self, f64::EPSILON, f64::INFINITY) {
+        //     let target_direction = hit.normal() + Vec3D::random_on_unit_sphere(rng);
+        //     // let target_direction = Vec3D::random_in_hemisphere(&hit.normal, rng);
+        //     let ray = Ray::new(*hit.p(), target_direction);
+        //     return 0.5 * ray.color(obstacles, rng, depth - 1);
+        // }
+
+        if let Some((obstacle_id, hit)) = obstacles.hit(self, Hit::THRESHOLD, f64::INFINITY) {
+            if let Some((scattered_ray, attenuation)) =
+                obstacles.scatter(self, &hit, obstacle_id, rng)
+            {
+                // Attenuation decreases the intensity of electromagnetic radiation -> So, I guess this means it makes a ray darker, eh?
+                return attenuation * scattered_ray.color(obstacles, rng, depth - 1);
+            }
+            return Color::BLACK;
         }
 
         let direction = self.direction.normalized();
         let t = 0.5 * (direction.y + 1.0);
         (1.0 - t) * Color::WHITE + t * Color::SKY_BLUE
+    }
+
+    /// Get a reference to the ray's direction.
+    pub fn direction(&self) -> &Vec3D {
+        &self.direction
+    }
+
+    /// Get a reference to the ray's origin.
+    pub fn origin(&self) -> &Point3D {
+        &self.origin
     }
 }
 
@@ -169,20 +85,26 @@ impl Vec3D {
         }
     }
 
-    pub fn magnitude_squared(&self) -> f64 {
-        self.x.powi(2) + self.y.powi(2) + self.z.powi(2)
-    }
-
-    pub fn magnitude(&self) -> f64 {
-        self.magnitude_squared().sqrt()
-    }
-
     pub fn cross_product(&self, rhs: &Vec3D) -> Vec3D {
         let x = self.y * rhs.z - self.z * rhs.y;
         let y = self.z * rhs.x - self.x * rhs.z;
         let z = self.x * rhs.y - self.y * rhs.x;
 
         Vec3D::new(x, y, z)
+    }
+
+    pub fn magnitude(&self) -> f64 {
+        self.magnitude_squared().sqrt()
+    }
+
+    pub fn magnitude_squared(&self) -> f64 {
+        self.x.powi(2) + self.y.powi(2) + self.z.powi(2)
+    }
+
+    pub fn near_zero(&self) -> bool {
+        (self.x.abs() < Vec3D::THRESHOLD)
+            && (self.y.abs() < Vec3D::THRESHOLD)
+            && (self.z.abs() < Vec3D::THRESHOLD)
     }
 
     pub fn normalize(&mut self) {
@@ -221,12 +143,19 @@ impl Vec3D {
 
     pub fn random_in_hemisphere(normal: &Vec3D, rng: &mut ThreadRng) -> Self {
         let in_unit_sphere = Vec3D::random_in_unit_sphere(rng);
-        if in_unit_sphere * normal > 0.0 { // In the same hemisphere as the normal
+        if in_unit_sphere * normal > 0.0 {
+            // In the same hemisphere as the normal
             in_unit_sphere
         } else {
             -in_unit_sphere
         }
     }
+
+    pub fn reflect(&self, n: &Self) -> Self {
+        self - 2.0 * (self * n) * n
+    }
+
+    pub const THRESHOLD: f64 = 1e-8;
 }
 
 impl<T: Into<f64>> Add<T> for Vec3D {
@@ -243,6 +172,15 @@ impl Add<Vec3D> for Vec3D {
 
     fn add(self, rhs: Vec3D) -> Self::Output {
         Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
+impl Add<Vec3D> for &Vec3D {
+    type Output = Vec3D;
+
+    fn add(self, rhs: Vec3D) -> Self::Output {
+        // Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+        *self + rhs
     }
 }
 
@@ -288,6 +226,14 @@ impl<T: Into<f64>> Sub<T> for Vec3D {
 }
 
 impl Sub<Vec3D> for Vec3D {
+    type Output = Vec3D;
+
+    fn sub(self, rhs: Vec3D) -> Self::Output {
+        self.add(-rhs)
+    }
+}
+
+impl Sub<Vec3D> for &Vec3D {
     type Output = Vec3D;
 
     fn sub(self, rhs: Vec3D) -> Self::Output {
@@ -351,11 +297,29 @@ impl Mul<&Vec3D> for Vec3D {
     }
 }
 
+#[allow(clippy::op_ref)]
 impl Mul<Vec3D> for Vec3D {
     type Output = f64;
 
     fn mul(self, rhs: Vec3D) -> Self::Output {
         self * &rhs
+    }
+}
+
+#[allow(clippy::op_ref)]
+impl Mul<Vec3D> for &Vec3D {
+    type Output = f64;
+
+    fn mul(self, rhs: Vec3D) -> Self::Output {
+        *self * &rhs
+    }
+}
+
+impl Mul<&Vec3D> for &Vec3D {
+    type Output = f64;
+
+    fn mul(self, rhs: &Vec3D) -> Self::Output {
+        *self * rhs
     }
 }
 
@@ -372,6 +336,14 @@ impl Mul<Vec3D> for f64 {
 
     fn mul(self, rhs: Vec3D) -> Self::Output {
         rhs * self
+    }
+}
+
+impl Mul<&Vec3D> for f64 {
+    type Output = Vec3D;
+
+    fn mul(self, rhs: &Vec3D) -> Self::Output {
+        *rhs * self
     }
 }
 

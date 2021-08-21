@@ -3,8 +3,9 @@ use indicatif::{ProgressIterator, ProgressStyle};
 
 use nova::{
     camera::Camera,
-    geometry::{ObstacleCollection, Point3D, Sphere, Vec3D},
+    geometry::Point3D,
     image::{Color, Image},
+    obstacle::{material, ObstacleCollection, Sphere},
 };
 use rand::Rng;
 
@@ -18,8 +19,26 @@ fn main() -> Result<()> {
 
     // World
     let world = ObstacleCollection::new(vec![
-        Box::new(Sphere::new(Vec3D::new(0, 0, -1), 0.5)),
-        Box::new(Sphere::new(Vec3D::new(0, -100.5, -1), 100)),
+        Box::new(Sphere::new(
+            Point3D::new(0, -100.5, -1),
+            100,
+            material::Lambertian::new(0.8, Color::new(0.8, 0.8, 0.0)),
+        )),
+        Box::new(Sphere::new(
+            Point3D::new(0, 0, -1),
+            0.5,
+            material::Lambertian::new(0.8, Color::new(0.7, 0.3, 0.3)),
+        )),
+        Box::new(Sphere::new(
+            Point3D::new(-1, 0, -1),
+            0.5,
+            material::Metal::new(0.8, Color::new(0.8, 0.8, 0.8), 0.3),
+        )),
+        Box::new(Sphere::new(
+            Point3D::new(1, 0, -1),
+            0.5,
+            material::Metal::new(0.8, Color::new(0.8, 0.6, 0.2), 1.0),
+        )),
     ]);
 
     // Camera
