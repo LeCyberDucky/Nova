@@ -13,6 +13,7 @@ image = "0.23.14"
 indicatif = { git = "https://github.com/mitsuhiko/indicatif", features = ["improved_unicode"] }
 rand = "0.8.4"
 rand_distr = "0.4.1"
+rayon = "1.5.1"
 
 
 [patch.crates-io]

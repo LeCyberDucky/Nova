@@ -293,6 +293,7 @@ dependencies = [
  "ndarray",
  "rand",
  "rand_distr",
+ "rayon",
 ]
 
 [[package]]

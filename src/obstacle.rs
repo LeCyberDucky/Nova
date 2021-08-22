@@ -23,7 +23,7 @@ impl ObstacleCollection {
         self.obstacles.clear();
     }
 
-    fn add(&mut self, obstacle: Box<dyn Obstacle>) {
+    pub fn add(&mut self, obstacle: Box<dyn Obstacle>) {
         self.obstacles.push(obstacle);
     }
 
