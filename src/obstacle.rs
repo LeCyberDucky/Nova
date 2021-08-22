@@ -282,6 +282,12 @@ pub mod material {
                 attenuation,
             }
         }
+
+        pub fn reflectance(cosine: f64, refraction_index: f64) -> f64 {
+            // Use Schlick's approximation for reflectance
+            let r0 = ((1.0 - refraction_index) / (1.0 + refraction_index)).powi(2);
+            r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
+        }
     }
 
     impl Default for Dielectric {
@@ -312,11 +318,13 @@ pub mod material {
             let sin_theta = (1.0 - cos_theta.powi(2)).sqrt();
 
             let cannot_refract = (refraction_ratio * sin_theta) > 1.0;
-            let direction = if cannot_refract {
-                unit_direction.reflect(hit.normal())
-            } else {
-                unit_direction.refract(hit.normal(), refraction_ratio)
-            };
+
+            let direction =
+                if cannot_refract || Dielectric::reflectance(cos_theta, refraction_ratio) > 1.0 {
+                    unit_direction.reflect(hit.normal())
+                } else {
+                    unit_direction.refract(hit.normal(), refraction_ratio)
+                };
 
             Some((Ray::new(hit.p, direction), self.attenuation))
         }
