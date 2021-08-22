@@ -27,7 +27,7 @@ fn main() -> Result<()> {
         Box::new(Sphere::new(
             Point3D::new(0, 0, -1),
             0.5,
-            material::Dielectric::new(1.5, Color::WHITE),
+            material::Lambertian::new(0.8, Color::new(0.1, 0.2, 0.5)),
         )),
         Box::new(Sphere::new(
             Point3D::new(-1, 0, -1),
@@ -37,7 +37,7 @@ fn main() -> Result<()> {
         Box::new(Sphere::new(
             Point3D::new(1, 0, -1),
             0.5,
-            material::Metal::new(Color::new(0.8, 0.6, 0.2), 1.0),
+            material::Metal::new(Color::new(0.8, 0.6, 0.2), 0.0),
         )),
     ]);
 
