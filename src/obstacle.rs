@@ -7,7 +7,7 @@ use crate::{
 
 use self::material::Material;
 
-pub trait Obstacle: Material {
+pub trait Obstacle: Material + Sync {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<Hit>;
 }
 
@@ -91,7 +91,7 @@ pub struct Sphere<A: Material> {
     material: A,
 }
 
-impl<A: Material> Sphere<A> {
+impl<A: Material + Sync> Sphere<A> {
     pub fn new<T: Into<f64>>(center: Point3D, radius: T, material: A) -> Self {
         Self {
             center,
@@ -105,7 +105,7 @@ impl<A: Material> Sphere<A> {
     }
 }
 
-impl<A: Material> Obstacle for Sphere<A> {
+impl<A: Material + Sync> Obstacle for Sphere<A> {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<Hit> {
         let co = ray.origin() - self.center;
         let a = ray.direction().magnitude_squared();

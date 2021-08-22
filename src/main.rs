@@ -8,6 +8,7 @@ use nova::{
     obstacle::{material, ObstacleCollection, Sphere},
 };
 use rand::Rng;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 fn main() -> Result<()> {
     let mut rng = rand::thread_rng();
@@ -16,7 +17,7 @@ fn main() -> Result<()> {
     let aspect_ratio = (16, 9);
     let image_scale = 80;
     let mut image = Image::new(image_scale * aspect_ratio.0, image_scale * aspect_ratio.1);
-    let samples_per_pixel = 100;
+    let samples_per_pixel = 500;
     let max_ray_recursion_depth = 50;
 
     // World
@@ -79,7 +80,7 @@ fn main() -> Result<()> {
     let progress_style = ProgressStyle::default_bar().progress_chars("🌞🌈☔").template("{wide_bar:.125} {percent}/100%\n{spinner:.cyan} Elapsed time: {elapsed_precise} | Estimated total time: {duration_precise}");
 
     for y in (0..*image.height()).progress_with_style(progress_style) {
-        for x in 0..*image.width() {
+        let row: Vec<Color> = (0..*image.width()).into_par_iter().map_init(rand::thread_rng, |mut rng, x| {
             let j = image.height() - 1 - y;
             let i = x;
             let mut color = Color::BLACK;
@@ -91,7 +92,11 @@ fn main() -> Result<()> {
                 let ray = camera.get_ray(u, v, &mut rng);
                 color += ray.color(&world, &mut rng, max_ray_recursion_depth);
             }
-            image.pixels()[(y, x)] = (color / samples_per_pixel).into();
+            // image.pixels()[(y, x)] = (color / samples_per_pixel).into();
+            color / samples_per_pixel
+        }).collect();
+        for (x, color) in row.into_iter().enumerate() {
+            image.pixels()[(y, x)] = color.into();
         }
     }
     image.save("Nova.png")?;
