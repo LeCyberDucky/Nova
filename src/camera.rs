@@ -1,3 +1,5 @@
+use rand::prelude::ThreadRng;
+
 use crate::geometry::{Point3D, Ray, Vec3D};
 
 pub struct Camera {
@@ -10,6 +12,12 @@ pub struct Camera {
     vertical: Vec3D,
     vertical_fov: f64, // Degrees
     aspect_ratio: (i32, i32),
+    aperture: f64,
+    focus_distance: f64,
+    lens_radius: f64,
+    u: Vec3D,
+    v: Vec3D,
+    w: Vec3D,
 }
 
 impl Camera {
@@ -19,6 +27,8 @@ impl Camera {
         view_up: Vec3D,
         aspect_ratio: (i32, i32),
         vertical_fov: f64,
+        aperture: f64,
+        focus_distance: f64,
     ) -> Self {
         let theta = vertical_fov.to_radians();
         let h = (theta / 2.0).tan();
@@ -31,9 +41,11 @@ impl Camera {
         let v = w.cross_product(&u);
 
         let origin = look_from;
-        let horizontal = viewport_width * u;
-        let vertical = viewport_height * v;
-        let lower_left_corner = origin - horizontal / 2 - vertical / 2 - w;
+        let horizontal = focus_distance * viewport_width * u;
+        let vertical = focus_distance * viewport_height * v;
+        let lower_left_corner = origin - horizontal / 2 - vertical / 2 - focus_distance * w;
+
+        let lens_radius = aperture / 2.0;
 
         Self {
             look_from,
@@ -45,12 +57,21 @@ impl Camera {
             vertical,
             vertical_fov,
             aspect_ratio,
+            aperture,
+            focus_distance,
+            lens_radius,
+            u,
+            v,
+            w,
         }
     }
 
-    pub fn get_ray(&self, s: f64, t: f64) -> Ray {
+    pub fn get_ray(&self, s: f64, t: f64, rng: &mut ThreadRng) -> Ray {
+        let rd = self.lens_radius * Vec3D::random_in_unit_disk(rng);
+        let offset = self.u * rd.x + self.v * rd.y;
+
         let direction =
-            self.lower_left_corner + s * self.horizontal + t * self.vertical - self.origin;
-        Ray::new(self.origin, direction)
+            self.lower_left_corner + s * self.horizontal + t * self.vertical - self.origin - offset;
+        Ray::new(self.origin + offset, direction)
     }
 }

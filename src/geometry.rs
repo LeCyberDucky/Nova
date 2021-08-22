@@ -151,6 +151,11 @@ impl Vec3D {
         }
     }
 
+    pub fn random_in_unit_disk(rng: &mut ThreadRng) -> Self {
+        let v: [f64; 2] = rand_distr::UnitDisc.sample(rng);
+        Self::new(v[0], v[1], 0)
+    }
+
     pub fn reflect(&self, n: &Self) -> Self {
         self - 2.0 * (self * n) * n
     }

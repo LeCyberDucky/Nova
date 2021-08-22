@@ -1,5 +1,3 @@
-use std::f64::consts::PI;
-
 use anyhow::Result;
 use indicatif::{ProgressIterator, ProgressStyle};
 
@@ -51,12 +49,16 @@ fn main() -> Result<()> {
     ]);
 
     // Camera
+    let look_from = Point3D::new(3, 3, 2);
+    let look_at = Point3D::new(0, 0, -1);
     let camera = Camera::new(
-        Point3D::new(-2, 2, 1),
-        Point3D::new(0, 0, -1),
+        look_from,
+        look_at,
         Vec3D::new(0, 1, 0),
         (aspect_ratio.0 as i32, aspect_ratio.1 as i32),
         20.0,
+        2.0,
+        (look_from - look_at).magnitude(),
     );
 
     // Render
@@ -73,7 +75,7 @@ fn main() -> Result<()> {
                 let u = (i as f64 + rng.gen::<f64>()) / (image.width() - 1) as f64;
                 let v = (j as f64 + rng.gen::<f64>()) / (image.height() - 1) as f64;
 
-                let ray = camera.get_ray(u, v);
+                let ray = camera.get_ray(u, v, &mut rng);
                 color += ray.color(&world, &mut rng, max_ray_recursion_depth);
             }
             image.pixels()[(y, x)] = (color / samples_per_pixel).into();
