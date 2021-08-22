@@ -1,42 +1,56 @@
 use crate::geometry::{Point3D, Ray, Vec3D};
 
 pub struct Camera {
+    look_from: Point3D,
+    look_at: Point3D,
+    view_up: Vec3D,
     origin: Point3D,
     lower_left_corner: Point3D,
     horizontal: Vec3D,
     vertical: Vec3D,
+    vertical_fov: f64, // Degrees
+    aspect_ratio: (i32, i32),
 }
 
 impl Camera {
     pub fn new(
+        look_from: Point3D,
+        look_at: Point3D,
+        view_up: Vec3D,
         aspect_ratio: (i32, i32),
-        viewport_height: f64,
-        focal_length: f64,
-        origin: Vec3D,
+        vertical_fov: f64,
     ) -> Self {
-        // let viewport_height = 2.0;
+        let theta = vertical_fov.to_radians();
+        let h = (theta / 2.0).tan();
+
+        let viewport_height = 2.0 * h;
         let viewport_width = viewport_height * (aspect_ratio.0 as f64 / aspect_ratio.1 as f64);
 
-        let horizontal = Vec3D::new(viewport_width, 0, 0);
-        let vertical = Vec3D::new(0, viewport_height, 0);
+        let w = (look_from - look_at).normalized();
+        let u = view_up.cross_product(&w).normalized();
+        let v = w.cross_product(&u);
 
-        // let view_port = aspect_ratio;
-        // let horizontal = Vec3D::new(view_port.0, 0, 0);
-        // let vertical = Vec3D::new(0, view_port.1, 0);
-        let lower_left_corner =
-            origin - horizontal / 2 - vertical / 2 - Vec3D::new(0, 0, focal_length);
+        let origin = look_from;
+        let horizontal = viewport_width * u;
+        let vertical = viewport_height * v;
+        let lower_left_corner = origin - horizontal / 2 - vertical / 2 - w;
 
         Self {
+            look_from,
+            look_at,
+            view_up,
             origin,
             lower_left_corner,
             horizontal,
             vertical,
+            vertical_fov,
+            aspect_ratio,
         }
     }
 
-    pub fn get_ray(&self, u: f64, v: f64) -> Ray {
+    pub fn get_ray(&self, s: f64, t: f64) -> Ray {
         let direction =
-            self.lower_left_corner + u * self.horizontal + v * self.vertical - self.origin;
+            self.lower_left_corner + s * self.horizontal + t * self.vertical - self.origin;
         Ray::new(self.origin, direction)
     }
 }

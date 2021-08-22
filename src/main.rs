@@ -1,9 +1,11 @@
+use std::f64::consts::PI;
+
 use anyhow::Result;
 use indicatif::{ProgressIterator, ProgressStyle};
 
 use nova::{
     camera::Camera,
-    geometry::Point3D,
+    geometry::{Point3D, Vec3D},
     image::{Color, Image},
     obstacle::{material, ObstacleCollection, Sphere},
 };
@@ -18,7 +20,14 @@ fn main() -> Result<()> {
     let max_ray_recursion_depth = 50;
 
     // World
+    // let R = (PI/4.0).cos();
     let world = ObstacleCollection::new(vec![
+        // Box::new(Sphere::new(
+        //     Point3D::new(-R, 0, -1), R, material::Lambertian::new(1.0, Color::new(0.0, 0.0, 1.0))
+        // )),
+        // Box::new(Sphere::new(
+        //     Point3D::new(R, 0, -1), R, material::Lambertian::new(1.0, Color::new(1.0, 0.0, 0.0))
+        // )),
         Box::new(Sphere::new(
             Point3D::new(0, -100.5, -1),
             100,
@@ -27,7 +36,7 @@ fn main() -> Result<()> {
         Box::new(Sphere::new(
             Point3D::new(0, 0, -1),
             0.5,
-            material::Lambertian::new(0.8, Color::new(0.1, 0.2, 0.5)),
+            material::Lambertian::new(0.9, Color::new(0.1, 0.2, 0.5)),
         )),
         Box::new(Sphere::new(
             Point3D::new(-1, 0, -1),
@@ -43,10 +52,11 @@ fn main() -> Result<()> {
 
     // Camera
     let camera = Camera::new(
+        Point3D::new(-2, 2, 1),
+        Point3D::new(0, 0, -1),
+        Vec3D::new(0, 1, 0),
         (aspect_ratio.0 as i32, aspect_ratio.1 as i32),
-        2.0,
-        1.0,
-        Point3D::new(0, 0, 0),
+        20.0,
     );
 
     // Render
