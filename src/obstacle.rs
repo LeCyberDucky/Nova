@@ -227,45 +227,28 @@ pub mod material {
 
     #[derive(Clone, Copy)]
     pub struct Metal {
-        albedo: f64,      // Fraction of incident energy that is reflected  [0; 1]
-        reflectance: f64, // Fraction of rays being reflected [0; 1]
         attenuation: Color,
         fuzz: f64, // Level of fuzziness [0; 1]
     }
 
     impl Metal {
-        pub fn new(albedo: f64, attenuation: Color, fuzz: f64) -> Self {
+        pub fn new(attenuation: Color, fuzz: f64) -> Self {
             // Not sure about all these asserts here. Should this return a result instead?
             // Eh, I guess panicking is okay, because this means that there is a logic error that needs to be taken care of
             assert!(
                 (0.0..=1.0).contains(&fuzz),
                 "Level of fuzziness should be in range [0; 1]"
             );
-            assert!(
-                (0.0..=1.0).contains(&albedo),
-                "Albedo should be in range [0; 1]"
-            );
+
             assert!(attenuation >= Color::BLACK && attenuation <= Color::WHITE);
-            let max_energy = Color::WHITE.r + Color::WHITE.g + Color::WHITE.b;
 
-            // Assuming the red, green, and blue components all weigh equally in terms of energy
-            let attenuated_energy = max_energy / (attenuation.r + attenuation.g + attenuation.b);
-            assert!(attenuated_energy >= albedo); // If the energy left after attenuating is lower than the albedo, we need more than 100% reflectance to reach the desired albedo. I.e. the material would need to actively produce light, instead of only reflecting
-
-            let reflectance = albedo / attenuated_energy;
-
-            Self {
-                albedo,
-                reflectance,
-                attenuation,
-                fuzz,
-            }
+            Self { attenuation, fuzz }
         }
     }
 
     impl Default for Metal {
         fn default() -> Self {
-            Self::new(0.85, Color::new(0.8, 0.8, 0.8), 0.0)
+            Self::new(Color::new(0.8, 0.8, 0.8), 0.0)
         }
     }
 
@@ -276,10 +259,6 @@ pub mod material {
             hit: &Hit,
             rng: &mut ThreadRng,
         ) -> Option<(Ray, Color)> {
-            // if !rng.gen_bool(self.reflectance) {
-            //     // No reflection. Ray absorbed
-            //     return None;
-            // }
             let mut reflection_direction =
                 incident_ray.direction().normalized().reflect(&hit.normal);
             if self.fuzz > 0.0 {
@@ -288,6 +267,48 @@ pub mod material {
             let scattered_ray = Ray::new(hit.p, reflection_direction);
             ((scattered_ray.direction() * hit.normal) > 0.0)
                 .then_some((scattered_ray, self.attenuation))
+        }
+    }
+
+    pub struct Dielectric {
+        refraction_index: f64,
+        attenuation: Color,
+    }
+
+    impl Dielectric {
+        pub fn new(refraction_index: f64, attenuation: Color) -> Self {
+            Self {
+                refraction_index,
+                attenuation,
+            }
+        }
+    }
+
+    impl Default for Dielectric {
+        fn default() -> Self {
+            Self {
+                refraction_index: 1.0,
+                attenuation: Color::BLACK,
+            }
+        }
+    }
+
+    impl Material for Dielectric {
+        fn scatter(
+            &self,
+            incident_ray: &Ray,
+            hit: &Hit,
+            _rng: &mut ThreadRng,
+        ) -> Option<(Ray, Color)> {
+            let refraction_ratio = if hit.front_face {
+                1.0 / self.refraction_index
+            } else {
+                self.refraction_index
+            };
+
+            let unit_direction = incident_ray.direction().normalized();
+            let refracted = unit_direction.refract(hit.normal(), refraction_ratio);
+            Some((Ray::new(hit.p, refracted), self.attenuation))
         }
     }
 }

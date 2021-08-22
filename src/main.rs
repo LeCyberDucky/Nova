@@ -27,17 +27,17 @@ fn main() -> Result<()> {
         Box::new(Sphere::new(
             Point3D::new(0, 0, -1),
             0.5,
-            material::Lambertian::new(0.8, Color::new(0.7, 0.3, 0.3)),
+            material::Dielectric::new(1.5, Color::WHITE),
         )),
         Box::new(Sphere::new(
             Point3D::new(-1, 0, -1),
             0.5,
-            material::Metal::new(0.8, Color::new(0.8, 0.8, 0.8), 0.3),
+            material::Dielectric::new(1.5, Color::WHITE),
         )),
         Box::new(Sphere::new(
             Point3D::new(1, 0, -1),
             0.5,
-            material::Metal::new(0.8, Color::new(0.8, 0.6, 0.2), 1.0),
+            material::Metal::new(Color::new(0.8, 0.6, 0.2), 1.0),
         )),
     ]);
 

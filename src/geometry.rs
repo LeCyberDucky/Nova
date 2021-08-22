@@ -155,6 +155,13 @@ impl Vec3D {
         self - 2.0 * (self * n) * n
     }
 
+    pub fn refract(&self, n: &Self, etai_over_etat: f64) -> Self {
+        let cos_theta = (-self * n).min(1.0);
+        let r_out_perp = etai_over_etat * (self + cos_theta * n);
+        let r_out_parallel = -(1.0 - r_out_perp.magnitude_squared()).abs().sqrt() * n;
+        r_out_perp + r_out_parallel
+    }
+
     pub const THRESHOLD: f64 = 1e-8;
 }
 
